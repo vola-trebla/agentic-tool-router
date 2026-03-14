@@ -1,4 +1,4 @@
-export type StepType = "think" | "act" | "observe";
+export type StepType = 'think' | 'act' | 'observe';
 
 export interface Step {
   type: StepType;
@@ -26,7 +26,7 @@ export interface Tool {
 }
 
 export interface Message {
-  role: "user" | "assistant" | "system";
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
