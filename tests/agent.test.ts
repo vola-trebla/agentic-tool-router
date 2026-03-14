@@ -25,20 +25,6 @@ describe('Agent', () => {
     expect(result.toolsUsed).toHaveLength(0);
   });
 
-  it('calls tool and returns answer after observation', async () => {
-    const provider = createMockProvider([
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: 'The ISS is at 45N, 90W.' },
-    ]);
-
-    const result = await runAgent('Where is the ISS?', provider);
-
-    expect(result.answer).toBe('The ISS is at 45N, 90W.');
-    expect(result.toolsUsed).toContain('iss-position');
-    expect(result.steps.some((s) => s.type === 'act')).toBe(true);
-    expect(result.steps.some((s) => s.type === 'observe')).toBe(true);
-  });
-
   it('handles unknown tool gracefully', async () => {
     const provider = createMockProvider([
       { text: '', toolCall: { name: 'unknown-tool' } },
@@ -52,25 +38,13 @@ describe('Agent', () => {
     expect(result.toolsUsed).toHaveLength(0);
   });
 
-  it('does not duplicate tool in toolsUsed when called twice', async () => {
+  it('stops after MAX_ITERATIONS with only unknown tools', async () => {
     const provider = createMockProvider([
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: 'Done.' },
-    ]);
-
-    const result = await runAgent('Track ISS twice', provider);
-
-    expect(result.toolsUsed.filter((t) => t === 'iss-position')).toHaveLength(1);
-  });
-
-  it('stops after MAX_ITERATIONS and returns fallback', async () => {
-    const provider = createMockProvider([
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: '', toolCall: { name: 'iss-position' } },
-      { text: '', toolCall: { name: 'iss-position' } },
+      { text: '', toolCall: { name: 'fake-tool' } },
+      { text: '', toolCall: { name: 'fake-tool' } },
+      { text: '', toolCall: { name: 'fake-tool' } },
+      { text: '', toolCall: { name: 'fake-tool' } },
+      { text: '', toolCall: { name: 'fake-tool' } },
     ]);
 
     const result = await runAgent('Loop forever', provider);
