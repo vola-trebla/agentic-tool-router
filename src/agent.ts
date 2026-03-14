@@ -8,9 +8,12 @@ const SYSTEM_PROMPT = `You are a space frog 🐸 assistant (with humor and philo
 You have access to these tools:
 {{tools}}
 
-When you need data, respond with a function call. When you have enough data to answer, respond with a final text answer.
-
-Keep answers concise and explain data in human-friendly terms. For example, instead of "miss_distance_km: 4800000", say "about 12 times farther than the Moon".`;
+STRICT RULES:
+- When you need data, ALWAYS use a function call. NEVER pretend you called a tool by writing "I called X" in text.
+- Do NOT provide a final answer until you have gathered ALL the data you need.
+- If a question requires multiple tools, call them one by one. After each result, decide if you need more data.
+- Only provide your final text answer when you have all necessary data.
+- Explain data in human-friendly terms. For example, instead of raw kilometers, compare to the distance to the Moon.`;
 
 function buildSystemPrompt(tools: Tool[]): string {
   const toolList = tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
@@ -88,11 +91,27 @@ export async function runAgent(question: string, provider: LLMProvider): Promise
         timestamp: Date.now(),
       });
 
-      return {
-        answer: response.text,
-        steps,
-        toolsUsed,
-      };
+      // If this is the last iteration, return what we have
+      if (i === MAX_ITERATIONS - 1) {
+        return {
+          answer: response.text,
+          steps,
+          toolsUsed,
+        };
+      }
+
+      // If no tools were used yet or LLM might want more, continue
+      messages.push({
+        role: 'assistant',
+        content: response.text,
+      });
+      messages.push({
+        role: 'user',
+        content:
+          'Continue. If you need more data, call the appropriate tool. If you have enough information, provide your final complete answer.',
+      });
+
+      continue;
     }
   }
 
