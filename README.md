@@ -118,7 +118,3 @@ src/
 public/
 └── index.html            Web UI (Tailwind + marked.js)
 ```
-
-## License
-
-MIT
