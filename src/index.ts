@@ -1,4 +1,5 @@
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { runAgent } from './agent.js';
@@ -11,6 +12,8 @@ const app = new Hono();
 app.use('*', cors());
 
 const provider = createGeminiProvider(getAllTools());
+
+app.use('/*', serveStatic({ root: './public' }));
 
 app.get('/health', (c) => {
   return c.json({ status: 'ok' });

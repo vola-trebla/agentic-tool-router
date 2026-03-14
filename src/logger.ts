@@ -4,6 +4,7 @@ const ICONS: Record<string, string> = {
   think: '🧠',
   act: '🔧',
   observe: '👁️',
+  final: '✅',
 };
 
 export function logAgentResult(result: AgentResult): void {

@@ -1,102 +1,124 @@
+<div align="center">
+
 # Agentic Tool Router
 
-An AI agent that receives natural language questions about space, autonomously decides which NASA tools to call, executes them step by step, and returns a synthesized human-friendly answer.
+**An AI agent that answers space questions using real-time NASA data.**
 
-## What It Does
+Ask a question in plain English — the agent decides which tools to call,<br/>
+gathers live data, and returns a human-friendly answer with full reasoning trace.
 
-Instead of manually calling APIs, you ask a question:
+<br/>
+
+<img src="docs/screenshot.png" alt="Agentic Tool Router UI" width="700" />
+
+<br/>
+
+</div>
+
+---
+
+## How It Works
+
+The agent follows a **ReAct loop** — it thinks, acts, observes, and repeats until it has enough data:
 
 ```
-"Is anything dangerous near Earth today?"
+🧠 THINK     "I need to check near-Earth asteroids"
+⚙️ ACT       calls near-earth-asteroids tool
+👁️ OBSERVE   "7 asteroids found, none hazardous"
+🧠 THINK     "Let me also check solar activity"
+⚙️ ACT       calls space-weather tool
+👁️ OBSERVE   "No significant flares in the past 7 days"
+🧠 THINK     "I have enough data to answer"
+✅ ANSWER    "7 asteroids are passing by safely, the Sun is calm."
 ```
 
-The agent **thinks**, **acts**, and **observes** in a loop (ReAct pattern):
+Every step is logged and returned as a **reasoning trace** — you see exactly how the agent arrived at its answer.
 
-```
-THINK:    "I need to check near-Earth asteroids"
-ACT:      calls asteroids tool
-OBSERVE:  "16 asteroids found, 2 potentially hazardous"
-THINK:    "I should also check solar activity"
-ACT:      calls space-weather tool
-OBSERVE:  "M2-class solar flare detected"
-THINK:    "I have enough data to answer"
-ANSWER:   "There's a 375m asteroid passing by safely, plus moderate solar activity."
-```
+## Key Capabilities
 
-Every step is logged and returned as a **reasoning trace**, so you can see exactly how the agent arrived at its answer.
-
-## Why This Matters
-
-This project demonstrates the difference between:
-
-- **LLM alone** — answers from training data, can hallucinate
-- **LLM + tools + real-time data** — answers grounded in live NASA data
-
-Three core capabilities of the agent:
-
-| Capability | Description |
-|---|---|
-| **Tool Routing** | LLM decides which tools to call based on the question |
-| **Data Interpretation** | Translates raw NASA numbers into human-readable explanations |
-| **Multi-Tool Synthesis** | Combines data from multiple sources into one coherent answer |
+|     | Capability                | What it does                                                               |
+| --- | ------------------------- | -------------------------------------------------------------------------- |
+| 🔀  | **Tool Routing**          | LLM autonomously decides which NASA APIs to call                           |
+| 🧠  | **Multi-Step Reasoning**  | Gathers data across multiple tools before answering                        |
+| 📊  | **Data Interpretation**   | Translates raw numbers into human terms (_"about 4x the Moon's distance"_) |
+| 🔍  | **Transparent Reasoning** | Full trace of every think → act → observe step                             |
 
 ## Tools
 
-| Tool | Source | Description |
-|---|---|---|
-| 🛰️ ISS Position | Open Notify API | Current location of the International Space Station |
-| ☄️ Near-Earth Asteroids | NASA NeoWs API | Asteroids passing close to Earth today |
-| 🌌 Photo of the Day | NASA APOD API | Astronomy Picture of the Day |
-| ☀️ Space Weather | NASA DONKI API | Solar flares and geomagnetic storms |
+| Tool                    | API         | What it returns                                                 |
+| ----------------------- | ----------- | --------------------------------------------------------------- |
+| 🛰️ **ISS Position**     | Open Notify | Real-time lat/lng of the International Space Station            |
+| ☄️ **Asteroids**        | NASA NeoWs  | Near-Earth objects today — size, speed, distance, hazard status |
+| 🌌 **Photo of the Day** | NASA APOD   | Astronomy Picture of the Day with explanation                   |
+| ☀️ **Space Weather**    | NASA DONKI  | Solar flares and geomagnetic storms (past 7 days)               |
 
 ## Tech Stack
 
-- **Runtime:** TypeScript, tsx, NodeNext
-- **LLM:** Gemini 2.5 Flash (function calling)
-- **Server:** Hono
-- **Validation:** Zod
-- **Architecture:** ReAct agent loop — LLM provider abstracted behind an interface for easy swapping
+| Layer            | Technology                               |
+| ---------------- | ---------------------------------------- |
+| **Runtime**      | TypeScript, NodeNext, tsx                |
+| **LLM**          | Gemini 2.5 Flash-Lite (function calling) |
+| **Server**       | Hono                                     |
+| **Frontend**     | Tailwind CSS (CDN) + marked.js           |
+| **Architecture** | ReAct agent loop, provider pattern       |
 
-## Getting Started
+## Quick Start
 
 ```bash
-git clone https://github.com/albertalov/agentic-tool-router.git
+git clone https://github.com/vola-trebla/agentic-tool-router.git
 cd agentic-tool-router
 npm install
 cp .env.example .env
-# Add your API keys to .env
+```
+
+Add your API keys to `.env`:
+
+| Key              | Where to get                                           |
+| ---------------- | ------------------------------------------------------ |
+| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
+| `NASA_API_KEY`   | [api.nasa.gov](https://api.nasa.gov) — free, instant   |
+
+Run the server:
+
+```bash
 npx tsx src/index.ts
 ```
 
-## API Keys
+Open [http://localhost:3000](http://localhost:3000) and ask something about space.
 
-| Key | Where to get |
-|---|---|
-| `GEMINI_API_KEY` | [Google AI Studio](https://aistudio.google.com/apikey) |
-| `NASA_API_KEY` | [api.nasa.gov](https://api.nasa.gov) — free, takes 1 minute |
+## API
+
+```bash
+# Health check
+curl http://localhost:3000/health
+
+# Ask a question
+curl -X POST http://localhost:3000/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "Is anything dangerous near Earth today?"}'
+```
+
+Response includes `answer`, `steps` (reasoning trace), and `toolsUsed`.
 
 ## Project Structure
 
 ```
 src/
-├── index.ts          — Hono server, POST /ask endpoint
-├── agent.ts          — ReAct loop (think → act → observe → repeat)
-├── types.ts          — All interfaces
-├── logger.ts         — Step-by-step reasoning trace
+├── index.ts              Hono server + static files
+├── agent.ts              ReAct loop (think → act → observe → repeat)
+├── config.ts             API keys and URLs
+├── types.ts              Interfaces
+├── logger.ts             Console reasoning trace
+├── providers/
+│   └── gemini.ts         Gemini LLM provider with function calling
 └── tools/
-    ├── registry.ts   — Tool registry + lookup
-    ├── iss.ts        — ISS position
-    ├── asteroids.ts  — Near-Earth asteroids
-    ├── apod.ts       — NASA photo of the day
-    └── space-weather.ts — Solar activity
-```
-
-## Example Request
-
-```bash
-curl -X POST http://localhost:3000/ask \
-  -H "Content-Type: application/json" \
-  -d '{"question": "Give me today'\''s space briefing"}'
+    ├── registry.ts       Tool registry + lookup
+    ├── iss.ts            ISS position
+    ├── asteroids.ts      Near-Earth asteroids
+    ├── apod.ts           Astronomy photo of the day
+    └── space-weather.ts  Solar flares
+public/
+└── index.html            Web UI (Tailwind + marked.js)
 ```
 
 ## License
