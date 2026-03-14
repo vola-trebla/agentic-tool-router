@@ -2,6 +2,7 @@ import 'dotenv/config';
 
 export const config = {
   nasaApiKey: process.env['NASA_API_KEY'] ?? '',
+  geminiApiKey: process.env['GEMINI_API_KEY'] ?? '',
 
   urls: {
     apod: 'https://api.nasa.gov/planetary/apod',
