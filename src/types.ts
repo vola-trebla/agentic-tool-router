@@ -1,4 +1,4 @@
-export type StepType = 'think' | 'act' | 'observe';
+export type StepType = 'think' | 'act' | 'observe' | 'final';
 
 export interface Step {
   type: StepType;

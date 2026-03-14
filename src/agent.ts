@@ -8,12 +8,21 @@ const SYSTEM_PROMPT = `You are a space frog 🐸 assistant (with humor and philo
 You have access to these tools:
 {{tools}}
 
+Follow this loop:
+1. Think about what data you need to answer the question
+2. Call the appropriate tool using the tool calling mechanism
+3. Observe the result
+4. Repeat steps 1-3 if you need more data from other tools
+5. When you have enough information, provide your final answer
+
 STRICT RULES:
-- When you need data, ALWAYS use a function call. NEVER pretend you called a tool by writing "I called X" in text.
-- Do NOT provide a final answer until you have gathered ALL the data you need.
-- If a question requires multiple tools, call them one by one. After each result, decide if you need more data.
-- Only provide your final text answer when you have all necessary data.
-- Explain data in human-friendly terms. For example, instead of raw kilometers, compare to the distance to the Moon.`;
+- ALWAYS use function calls to get data. NEVER write "I called X" or "I will call X" in text.
+- Do NOT describe tool usage in text — just call the tool directly.
+- If a question needs multiple tools, call them ONE BY ONE via function calls.
+- When you have enough data, give a complete answer explaining data in human-friendly terms.
+- Compare distances to the Moon (384,400 km), sizes to familiar objects (football fields, buses, buildings).
+- Explain complex numbers with simple analogies so anyone can understand.
+- If you don't have a tool for something, say so honestly and answer with what you have.`;
 
 function buildSystemPrompt(tools: Tool[]): string {
   const toolList = tools.map((t) => `- ${t.name}: ${t.description}`).join('\n');
@@ -52,8 +61,8 @@ export async function runAgent(question: string, provider: LLMProvider): Promise
           timestamp: Date.now(),
         });
         messages.push({
-          role: 'assistant',
-          content: `Tool "${toolName}" not found. Let me try another approach.`,
+          role: 'user',
+          content: `Tool "${toolName}" not found. Use a different tool or answer with what you have.`,
         });
         continue;
       }
@@ -73,12 +82,8 @@ export async function runAgent(question: string, provider: LLMProvider): Promise
       });
 
       messages.push({
-        role: 'assistant',
-        content: `I called ${toolName}.`,
-      });
-      messages.push({
         role: 'user',
-        content: `Tool result for ${toolName}: ${observation}`,
+        content: `[Tool result for ${toolName}]: ${observation}`,
       });
 
       continue;
@@ -86,37 +91,23 @@ export async function runAgent(question: string, provider: LLMProvider): Promise
 
     if (response.text) {
       steps.push({
-        type: 'think',
+        type: 'final',
         content: response.text,
         timestamp: Date.now(),
       });
 
-      // If this is the last iteration, return what we have
-      if (i === MAX_ITERATIONS - 1) {
-        return {
-          answer: response.text,
-          steps,
-          toolsUsed,
-        };
-      }
-
-      // If no tools were used yet or LLM might want more, continue
-      messages.push({
-        role: 'assistant',
-        content: response.text,
-      });
-      messages.push({
-        role: 'user',
-        content:
-          'Continue. If you need more data, call the appropriate tool. If you have enough information, provide your final complete answer.',
-      });
-
-      continue;
+      return {
+        answer: response.text,
+        steps,
+        toolsUsed,
+      };
     }
   }
 
+  const lastStep = steps.findLast((s) => s.type === 'final' || s.type === 'think');
+
   return {
-    answer: 'I ran out of steps trying to answer your question. Try asking something simpler.',
+    answer: lastStep?.content ?? 'I ran out of steps. Try a simpler question.',
     steps,
     toolsUsed,
   };
