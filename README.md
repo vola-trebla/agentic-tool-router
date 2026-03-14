@@ -1,5 +1,3 @@
-<div align="center">
-
 # Agentic Tool Router
 
 **An AI agent that answers space questions using real-time NASA data.**
